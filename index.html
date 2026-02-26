@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RVCL-S Delivery Outreach CRM</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3348;
+    --text: #e4e4e7;
+    --text2: #9ca3af;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --orange: #f97316;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header h1 span { color: var(--accent2); }
+  .header-stats { display: flex; gap: 16px; font-size: 13px; color: var(--text2); }
+  .header-stats .stat-val { color: var(--text); font-weight: 600; }
+
+  .layout { display: flex; height: calc(100vh - 57px); }
+  
+  .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+  .sidebar-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 8px; }
+  .filter-btn { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text2); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+  .filter-btn:hover { background: var(--surface2); color: var(--text); }
+  .filter-btn.active { background: var(--accent); color: white; }
+  .filter-btn .count { float: right; background: var(--surface2); padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+  .filter-btn.active .count { background: rgba(255,255,255,0.2); }
+
+  .main { flex: 1; overflow-y: auto; padding: 24px; }
+  
+  .pipeline { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .pipe-stage { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text2); transition: all 0.15s; }
+  .pipe-stage:hover { border-color: var(--accent); color: var(--text); }
+  .pipe-stage.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .pipe-stage .count { margin-left: 4px; opacity: 0.7; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+  
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: all 0.15s; cursor: pointer; }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .card-name { font-size: 16px; font-weight: 600; }
+  .card-org { font-size: 13px; color: var(--accent2); margin-top: 2px; }
+  .card-title { font-size: 12px; color: var(--text2); }
+  .card-priority { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px; }
+  .card-priority.High { background: rgba(239,68,68,0.15); color: var(--red); }
+  .card-priority.Medium { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .card-priority.Low { background: rgba(34,197,94,0.15); color: var(--green); }
+  
+  .card-expertise { font-size: 13px; color: var(--text2); margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-relevance { font-size: 12px; color: var(--text2); background: var(--surface2); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+  
+  .card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .card-status { font-size: 12px; padding: 4px 12px; border-radius: 8px; font-weight: 500; }
+  .card-status.not-contacted { background: var(--surface2); color: var(--text2); }
+  .card-status.outreach-sent { background: rgba(99,102,241,0.15); color: var(--accent2); }
+  .card-status.response-received { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .card-status.meeting-scheduled { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .card-status.meeting-completed { background: rgba(34,197,94,0.15); color: var(--green); }
+  .card-status.in-discussion { background: rgba(34,197,94,0.2); color: var(--green); }
+  .card-status.committed { background: rgba(34,197,94,0.3); color: var(--green); }
+  .card-status.declined { background: rgba(239,68,68,0.1); color: var(--red); }
+  .card-category { font-size: 11px; color: var(--text2); padding: 3px 8px; background: var(--surface2); border-radius: 6px; }
+  .card-intro { font-size: 12px; color: var(--text2); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .card-intro strong { color: var(--text); }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; }
+  .modal h2 { font-size: 20px; margin-bottom: 4px; }
+  .modal .modal-org { color: var(--accent2); font-size: 14px; margin-bottom: 16px; }
+  .modal label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; margin-top: 14px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .modal select, .modal input, .modal textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 14px; font-family: inherit; }
+  .modal textarea { min-height: 80px; resize: vertical; }
+  .modal select:focus, .modal input:focus, .modal textarea:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; }
+  .btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--text2); }
+  .btn-add-log { background: var(--surface2); color: var(--accent2); border: 1px solid var(--border); padding: 6px 14px; font-size: 12px; margin-top: 8px; }
+
+  .log-entry { background: var(--surface2); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 13px; }
+  .log-entry .log-date { color: var(--accent2); font-size: 11px; }
+  .log-entry .log-text { color: var(--text); margin-top: 4px; }
+
+  .empty-state { text-align: center; padding: 60px; color: var(--text2); }
+  .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .cards { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧬 RVCL-S <span>Delivery Outreach</span></h1>
+  <div class="header-stats">
+    <div><span class="stat-val" id="stat-total">0</span> contacts</div>
+    <div><span class="stat-val" id="stat-contacted">0</span> contacted</div>
+    <div><span class="stat-val" id="stat-meetings">0</span> meetings</div>
+    <div><span class="stat-val" id="stat-committed">0</span> committed</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>Category</h3>
+      <button class="filter-btn active" data-filter="category" data-value="all">All <span class="count" id="count-all"></span></button>
+      <button class="filter-btn" data-filter="category" data-value="Academic">Academic <span class="count" id="count-academic"></span></button>
+      <button class="filter-btn" data-filter="category" data-value="Industry">Industry <span class="count" id="count-industry"></span></button>
+    </div>
+    <div class="sidebar-section">
+      <h3>Priority</h3>
+      <button class="filter-btn" data-filter="priority" data-value="High">🔴 High <span class="count" id="count-high"></span></button>
+      <button class="filter-btn" data-filter="priority" data-value="Medium">🟡 Medium <span class="count" id="count-medium"></span></button>
+    </div>
+    <div class="sidebar-section">
+      <h3>Approach</h3>
+      <button class="filter-btn" data-filter="approach" data-value="Prime Editing">Prime Editing</button>
+      <button class="filter-btn" data-filter="approach" data-value="ASO">ASO</button>
+      <button class="filter-btn" data-filter="approach" data-value="LNP">LNP Delivery</button>
+      <button class="filter-btn" data-filter="approach" data-value="AAV">AAV Delivery</button>
+      <button class="filter-btn" data-filter="approach" data-value="VLP">VLP Delivery</button>
+      <button class="filter-btn" data-filter="approach" data-value="BBB">BBB Crossing</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="pipeline" id="pipeline"></div>
+    <div class="cards" id="cards"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+let data = null;
+let activeFilters = { category: 'all', priority: null, approach: null, stage: null };
+
+// Load data from localStorage or embedded default
+function loadData() {
+  const stored = localStorage.getItem('rvcl-crm-data');
+  if (stored) {
+    data = JSON.parse(stored);
+  } else {
+    // Will be populated on first load
+    fetch('data.json').then(r => r.json()).then(d => { data = d; saveData(); render(); }).catch(() => {
+      data = { contacts: [], pipeline_stages: ["Not Contacted","Outreach Sent","Response Received","Meeting Scheduled","Meeting Completed","In Discussion","Committed","Declined"] };
+    });
+    return;
+  }
+  render();
+}
+
+function saveData() {
+  localStorage.setItem('rvcl-crm-data', JSON.stringify(data));
+}
+
+function getStatusClass(status) {
+  return status.toLowerCase().replace(/\s+/g, '-');
+}
+
+function matchesFilter(contact) {
+  if (activeFilters.category !== 'all' && contact.category !== activeFilters.category) return false;
+  if (activeFilters.priority && contact.priority !== activeFilters.priority) return false;
+  if (activeFilters.approach) {
+    const exp = (contact.expertise + ' ' + contact.relevance).toLowerCase();
+    if (!exp.includes(activeFilters.approach.toLowerCase())) return false;
+  }
+  if (activeFilters.stage && contact.status !== activeFilters.stage) return false;
+  return true;
+}
+
+function render() {
+  if (!data) return;
+  const contacts = data.contacts;
+
+  // Stats
+  document.getElementById('stat-total').textContent = contacts.length;
+  document.getElementById('stat-contacted').textContent = contacts.filter(c => c.status !== 'Not Contacted').length;
+  document.getElementById('stat-meetings').textContent = contacts.filter(c => ['Meeting Scheduled','Meeting Completed'].includes(c.status)).length;
+  document.getElementById('stat-committed').textContent = contacts.filter(c => c.status === 'Committed').length;
+
+  // Sidebar counts
+  document.getElementById('count-all').textContent = contacts.length;
+  document.getElementById('count-academic').textContent = contacts.filter(c => c.category === 'Academic').length;
+  document.getElementById('count-industry').textContent = contacts.filter(c => c.category === 'Industry').length;
+  document.getElementById('count-high').textContent = contacts.filter(c => c.priority === 'High').length;
+  document.getElementById('count-medium').textContent = contacts.filter(c => c.priority === 'Medium').length;
+
+  // Pipeline
+  const pipeEl = document.getElementById('pipeline');
+  pipeEl.innerHTML = data.pipeline_stages.map(stage => {
+    const count = contacts.filter(c => c.status === stage).length;
+    const isActive = activeFilters.stage === stage;
+    return `<button class="pipe-stage ${isActive ? 'active' : ''}" data-stage="${stage}">${stage}<span class="count">${count}</span></button>`;
+  }).join('');
+
+  // Cards
+  const filtered = contacts.filter(matchesFilter);
+  const cardsEl = document.getElementById('cards');
+  
+  if (filtered.length === 0) {
+    cardsEl.innerHTML = '<div class="empty-state"><h3>No contacts match filters</h3><p>Try adjusting your filters</p></div>';
+    return;
+  }
+
+  // Sort: High priority first, then alphabetical
+  filtered.sort((a, b) => {
+    const pOrder = { High: 0, Medium: 1, Low: 2 };
+    if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
+    return a.name.localeCompare(b.name);
+  });
+
+  cardsEl.innerHTML = filtered.map(c => `
+    <div class="card" data-id="${c.id}">
+      <div class="card-header">
+        <div>
+          <div class="card-name">${c.name}</div>
+          <div class="card-org">${c.org}</div>
+          <div class="card-title">${c.title}</div>
+        </div>
+        <span class="card-priority ${c.priority}">${c.priority}</span>
+      </div>
+      <div class="card-expertise">${c.expertise}</div>
+      <div class="card-relevance">${c.relevance}</div>
+      <div class="card-intro"><strong>Intro path:</strong> ${c.intro_path}</div>
+      <div class="card-footer">
+        <span class="card-status ${getStatusClass(c.status)}">${c.status}</span>
+        <span class="card-category">${c.category}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openModal(contactId) {
+  const c = data.contacts.find(x => x.id === contactId);
+  if (!c) return;
+  
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <h2>${c.name}</h2>
+    <div class="modal-org">${c.org} — ${c.title}</div>
+    
+    <label>Status</label>
+    <select id="m-status">
+      ${data.pipeline_stages.map(s => `<option ${c.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+    </select>
+
+    <label>Priority</label>
+    <select id="m-priority">
+      <option ${c.priority === 'High' ? 'selected' : ''}>High</option>
+      <option ${c.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+      <option ${c.priority === 'Low' ? 'selected' : ''}>Low</option>
+    </select>
+
+    <label>Email</label>
+    <input id="m-email" value="${c.email || ''}" placeholder="email@example.com">
+
+    <label>Phone</label>
+    <input id="m-phone" value="${c.phone || ''}" placeholder="+1 ...">
+
+    <label>LinkedIn</label>
+    <input id="m-linkedin" value="${c.linkedin || ''}" placeholder="https://linkedin.com/in/...">
+
+    <label>Website</label>
+    <input id="m-website" value="${c.website || ''}" placeholder="https://...">
+
+    <label>Intro Path</label>
+    <textarea id="m-intro">${c.intro_path || ''}</textarea>
+
+    <label>Notes</label>
+    <textarea id="m-notes">${c.notes || ''}</textarea>
+
+    <label>Outreach Log</label>
+    <div id="m-logs">
+      ${(c.outreach_log || []).map(l => `
+        <div class="log-entry">
+          <div class="log-date">${l.date}</div>
+          <div class="log-text">${l.text}</div>
+        </div>
+      `).join('')}
+    </div>
+    <button class="btn btn-add-log" id="add-log-btn">+ Add Log Entry</button>
+    <div id="new-log-area" style="display:none; margin-top: 8px;">
+      <textarea id="m-new-log" placeholder="What happened? (e.g., Sent intro email, Had call, etc.)"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save</button>
+    </div>
+  `;
+
+  document.getElementById('add-log-btn').onclick = () => {
+    document.getElementById('new-log-area').style.display = 'block';
+    document.getElementById('m-new-log').focus();
+  };
+
+  document.getElementById('modal-cancel').onclick = closeModal;
+  document.getElementById('modal-save').onclick = () => {
+    c.status = document.getElementById('m-status').value;
+    c.priority = document.getElementById('m-priority').value;
+    c.email = document.getElementById('m-email').value;
+    c.phone = document.getElementById('m-phone').value;
+    c.linkedin = document.getElementById('m-linkedin').value;
+    c.website = document.getElementById('m-website').value;
+    c.intro_path = document.getElementById('m-intro').value;
+    c.notes = document.getElementById('m-notes').value;
+    
+    const newLog = document.getElementById('m-new-log').value.trim();
+    if (newLog) {
+      if (!c.outreach_log) c.outreach_log = [];
+      c.outreach_log.push({ date: new Date().toISOString().split('T')[0], text: newLog });
+    }
+    
+    saveData();
+    closeModal();
+    render();
+  };
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// Event delegation
+document.addEventListener('click', (e) => {
+  // Cards
+  const card = e.target.closest('.card');
+  if (card) { openModal(parseInt(card.dataset.id)); return; }
+
+  // Sidebar filters
+  const filterBtn = e.target.closest('.filter-btn');
+  if (filterBtn) {
+    const filter = filterBtn.dataset.filter;
+    const value = filterBtn.dataset.value;
+    
+    if (filter === 'category') {
+      activeFilters.category = value;
+      activeFilters.priority = null;
+      activeFilters.approach = null;
+      document.querySelectorAll('[data-filter="priority"], [data-filter="approach"]').forEach(b => b.classList.remove('active'));
+    } else if (filter === 'priority') {
+      activeFilters.priority = activeFilters.priority === value ? null : value;
+      activeFilters.category = 'all';
+      document.querySelectorAll('[data-filter="category"]').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-filter="category"][data-value="all"]').classList.add('active');
+    } else if (filter === 'approach') {
+      activeFilters.approach = activeFilters.approach === value ? null : value;
+    }
+    
+    document.querySelectorAll(`[data-filter="${filter}"]`).forEach(b => b.classList.remove('active'));
+    if (filter === 'category' || (filter !== 'category' && activeFilters[filter])) {
+      filterBtn.classList.add('active');
+    }
+    if (filter === 'category') {
+      filterBtn.classList.add('active');
+    }
+    
+    activeFilters.stage = null;
+    document.querySelectorAll('.pipe-stage').forEach(b => b.classList.remove('active'));
+    render();
+    return;
+  }
+
+  // Pipeline stages
+  const pipeBtn = e.target.closest('.pipe-stage');
+  if (pipeBtn) {
+    const stage = pipeBtn.dataset.stage;
+    activeFilters.stage = activeFilters.stage === stage ? null : stage;
+    render();
+    return;
+  }
+
+  // Modal overlay click to close
+  if (e.target.id === 'modal-overlay') { closeModal(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+loadData();
+</script>
+</body>
+</html>
